@@ -15,30 +15,30 @@ from pathlib import Path
 openai.api_key = os.getenv("OPENAI_API_KEY")
 metaphor = Metaphor(os.getenv("METAPHOR_API_KEY"))
 
-metaphor_prompt = "Most recent preprints on computer vision on arXiv."
 
-start_search = datetime.datetime.today() - datetime.timedelta(days=7)
+def summarise(query, autoprompt=True, num_results=10, start_publish_date=None):
 
-# search_response = metaphor.search(
-#     query=metaphor_prompt, use_autoprompt=True, start_published_date=str(start_search.date()), num_results=10
-# )
 
-# paper_abstracts = [f"{paper.title}\n {paper.extract}" for paper in search_response.get_contents().contents]
+    search_response = metaphor.search(
+        query=query, use_autoprompt=autoprompt, start_published_date=start_publish_date, num_results=10
+    )
 
-# print(paper_abstracts)
+    paper_abstracts = [f"{paper.title}\n {paper.extract}" for paper in search_response.get_contents().contents]
 
-# SYSTEM_MESSAGE = "You are a helpful assistant that summarises recent computer vision papers from their abstracts. Please summarise the following papers."
+    print(paper_abstracts)
 
-# completion = openai.ChatCompletion.create(
-#     model="gpt-3.5-turbo",
-#     messages=[
-#         {"role": "system", "content": SYSTEM_MESSAGE},
-#         {"role": "user", "content": " ".join(paper_abstracts)},
-        
-#     ],
-# )
+    SYSTEM_MESSAGE = "You are a helpful assistant that summarises recent computer vision papers from their abstracts. Please summarise the following papers."
 
-# print(completion.choices[0].message.content)
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": SYSTEM_MESSAGE},
+            {"role": "user", "content": " ".join(paper_abstracts)},
+            
+        ],
+    )
+
+    return completion.choices[0].message.content
 
 #I'd like to point out that everything I'm doing here is entirely trivial. I totally get that, considering
 #that it's really no different than the example that's already shown in the docs. But consider the following:
@@ -70,7 +70,7 @@ def metaphor_multi_media(query, autoprompt=True, num_results=1, start_publish_da
 
     if get_images:
 
-        message += "Tell the user that the images within the pdf have been saved locally."
+        message += " Tell the user that the images within the pdf have been saved locally."
 
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -97,24 +97,21 @@ def metaphor_multi_media(query, autoprompt=True, num_results=1, start_publish_da
 
         for page in reader.pages:
             for image_object in page.images:
-                with open(str(count) + image_object.name, "wb") as fp:
+                with open(f"{str(count)-{image_object.name}}", "wb") as fp:
                     fp.write(image_object.data)
                     count +=1
 
-        #Somewhere within here is an opportunity to feed these images into another system capable
-        #of image description, which would allow our search to delve much deeper into results and
-        #not just provide a list of places to go, but also help build a broader understanding of
-        #the results without the user even needing to look.
-
         
-
-    
     
     return completion
 
 
+metaphor_prompt = "Most recent preprints on computer vision on arXiv."
+
+start_search = datetime.datetime.today() - datetime.timedelta(days=7)
+
 response = metaphor_multi_media(
-    query=metaphor_prompt, autoprompt=True, start_publish_date=str(start_search), num_results=1, get_images=True
+    query=metaphor_prompt, autoprompt=True, start_publish_date=str(start_search), num_results=1, get_images=False
     )
 
 print(response)
